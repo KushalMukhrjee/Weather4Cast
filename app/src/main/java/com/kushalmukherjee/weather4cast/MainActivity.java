@@ -1,41 +1,35 @@
 package com.kushalmukherjee.weather4cast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.arch.core.util.Function;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.drawable.BitmapDrawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.gson.Gson;
 import com.kushalmukherjee.weather4cast.Model.Weather;
 
 import org.json.JSONObject;
 
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -46,7 +40,17 @@ public class MainActivity extends AppCompatActivity {
 
 
     TextView cityTextView;
+    TextView currentTemperatureTextView;
+    TextView maxTemperatureTextView;
+    TextView minTemperatureTextView;
+    ImageView weatherImageView;
+    ImageButton changeCityButton;
+
+
     LocationManager locationManager;
+
+    Weather currentWeather;
+    String currentCityName;
 
 
     @Override
@@ -75,14 +79,28 @@ public class MainActivity extends AppCompatActivity {
         locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
 
         cityTextView = (TextView) findViewById(R.id.cityTextView);
+        currentTemperatureTextView = (TextView) findViewById(R.id.tempTextView);
+        maxTemperatureTextView = (TextView) findViewById(R.id.maxTempTextView);
+        minTemperatureTextView = (TextView) findViewById(R.id.minTempTextView);
+        weatherImageView = (ImageView) findViewById(R.id.weatherImageView);
+        changeCityButton = (ImageButton) findViewById(R.id.changeCityImageButton);
 
+        changeCityButton.setOnClickListener(new View.OnClickListener() {
+
+
+            @Override
+            public void onClick(View v) {
+
+                Intent intent = new Intent(MainActivity.this,SelectCityActivity.class);
+                startActivityForResult(intent,1);
+
+
+
+            }
+        });
+
+        resetUIState();
         getCurrentLocation();
-
-
-
-
-
-
 
     }
 
@@ -91,15 +109,22 @@ public class MainActivity extends AppCompatActivity {
 
     protected void getCurrentLocation() {
 
-
-
-
         LocationListener locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
 //                Log.i("Location received:",location.toString());
-                updateCityName(new LatLng(location.getLatitude(),location.getLongitude()));
-                getWeatherDataOfLocation(location);
+                currentCityName = getCityName(new LatLng(location.getLatitude(),location.getLongitude()));
+
+                getWeatherDataOfLocation(location, new GetWeatherCompletionHandler() {
+                    @Override
+                    public void completion(Weather weather) {
+                        currentWeather = weather;
+
+                        refreshUIState();
+                    }
+                });
+
+                locationManager.removeUpdates(this);
 
 
             }
@@ -130,46 +155,122 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void getWeatherDataOfLocation(Location location) {
+    private void getWeatherDataOfLocation(Location location, GetWeatherCompletionHandler completionHandler) {
         System.out.println("-----MAking api call----");
 
         HashMap params = new HashMap<String ,String>();
         params.put("latitude",String.valueOf(location.getLatitude()));
         params.put("longitude",String.valueOf(location.getLongitude()));
 
+        APIManager.getInstance().makeRequest(MainActivity.this, params, new RequestCompletionHandler() {
 
-        APIManager.getInstance().makeRequest(MainActivity.this, params, new CompletionHandler() {
             @Override
             public void completion(String responseString) {
                 try {
-                    Gson gson = new Gson();
+
                     JSONObject jsonObject = new JSONObject(responseString);
+                    JSONParser parser = new JSONParser();
+                    completionHandler.completion(parser.parseWeatherJson(jsonObject));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
 
-                    Weather weather = gson.fromJson(responseString,Weather.class);
+    }
 
-                    Log.i("response JSON:", String.valueOf(weather.getCoordinates() == null));
+
+    protected String getCityName(LatLng latLng) {
+
+        String cityName = "";
+
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        try {
+            List<Address> addressList = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
+            cityName = addressList.get(0).getLocality();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return cityName;
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 1) {
+
+            if(resultCode == Activity.RESULT_OK) {
+                String location = data.getStringExtra("city");
+
+                try {
+                    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                    List<Address> list = geocoder.getFromLocationName(location, 1);
+                    Log.i("RecdLAtlng", String.valueOf(list.get(0).getLatitude()));
+
+                    Location receivedLocation = new Location("select_city_activity");
+                    receivedLocation.setLatitude(list.get(0).getLatitude());
+                    receivedLocation.setLongitude(list.get(0).getLongitude());
+
+                    getWeatherDataOfLocation(receivedLocation, new GetWeatherCompletionHandler() {
+                        @Override
+                        public void completion(Weather weather) {
+                            currentWeather = weather;
+                            currentCityName = list.get(0).getLocality();
+
+                            refreshUIState();
+                        }
+                    });
+
 
 
 
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+
             }
-        });
+
+        }
+
+
+
     }
 
+    public void refreshUIState() {
 
-    protected void updateCityName(LatLng latLng) {
+        cityTextView.setText(currentCityName);
+        DecimalFormat df = new DecimalFormat("#.#");
 
 
-
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        Double currentTempInCenti = Double.valueOf(df.format(currentWeather.getWeatherMain().getTemp() - 273));
+        Double maxTempInCenti = Double.valueOf(df.format(currentWeather.getWeatherMain().getTempMax() - 273));
+        Double minTempInCenti =  Double.valueOf(df.format(currentWeather.getWeatherMain().getTempMin() - 273));
+        currentTemperatureTextView.setText(currentTempInCenti.toString()+ " °c");
+        maxTemperatureTextView.setText(maxTempInCenti.toString()+ " °c");
+        minTemperatureTextView.setText(minTempInCenti.toString()+ " °c");
+        changeCityButton.setVisibility(View.VISIBLE);
         try {
-            List<Address> addressList = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
-            cityTextView.setText(addressList.get(0).getLocality());
+            weatherImageView.setImageBitmap(new ImageDownloader().execute("https://openweathermap.org/img/wn/" + (currentWeather.getWeatherDescription().getIcon()) + "@2x.png").get());
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
 
+    public void resetUIState() {
+        cityTextView.setText("");
+        currentTemperatureTextView.setText("");
+        maxTemperatureTextView.setText("");
+        minTemperatureTextView.setText("");
+        weatherImageView.setImageBitmap(null);
+        changeCityButton.setVisibility(View.INVISIBLE);
     }
 }
+
+
+
+interface GetWeatherCompletionHandler {
+    void completion(Weather weather);
+        }

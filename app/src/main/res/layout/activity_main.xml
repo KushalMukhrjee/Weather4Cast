@@ -21,9 +21,10 @@
 
     <TextView
         android:id="@+id/tempTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif-medium"
+        android:gravity="center"
         android:text="25  C"
         android:textSize="40sp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -36,8 +37,9 @@
         android:id="@+id/cityTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="50dp"
+        android:layout_marginBottom="140dp"
         android:fontFamily="sans-serif-black"
+        android:text="City here.."
         android:textSize="40sp"
         app:layout_constraintBottom_toTopOf="@+id/tempTextView"
         app:layout_constraintEnd_toEndOf="parent"
@@ -49,8 +51,9 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:gravity="fill_horizontal"
         android:orientation="horizontal"
+        android:paddingEnd="5dp"
         app:layout_constraintEnd_toEndOf="@+id/tempTextView"
         app:layout_constraintStart_toStartOf="@+id/tempTextView"
         app:layout_constraintTop_toBottomOf="@+id/tempTextView">
@@ -60,6 +63,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="30"
             android:textSize="20sp" />
 
@@ -68,8 +72,31 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:gravity="center"
             android:text="21"
             android:textSize="20sp" />
     </LinearLayout>
+
+    <ImageView
+        android:id="@+id/weatherImageView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/tempTextView"
+        app:layout_constraintEnd_toEndOf="@+id/tempTextView"
+        app:layout_constraintStart_toStartOf="@+id/tempTextView"
+        app:layout_constraintTop_toBottomOf="@+id/cityTextView"
+        app:srcCompat="@color/colorPrimary" />
+
+    <ImageButton
+        android:id="@+id/changeCityImageButton"
+        style="@android:style/Widget.Holo.Light.ImageButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@+id/cityTextView"
+        app:layout_constraintStart_toEndOf="@+id/cityTextView"
+        app:layout_constraintTop_toTopOf="@+id/cityTextView"
+        app:srcCompat="@drawable/arrow" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

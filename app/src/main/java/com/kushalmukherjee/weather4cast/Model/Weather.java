@@ -124,10 +124,10 @@ public class Weather {
 
     private Coordinates coordinates;
     private WeatherMain weatherMain;
-    private ArrayList<WeatherDescription> weatherDescription;
+    private WeatherDescription weatherDescription;
     private String Date;
 
-    Weather() {
+    public Weather() {
 
     }
 
@@ -147,12 +147,12 @@ public class Weather {
         this.weatherMain = weatherMain;
     }
 
-    public ArrayList<WeatherDescription> getWeatherDescription() {
+    public WeatherDescription getWeatherDescription() {
         return weatherDescription;
     }
 
-    public void setWeatherDescription(ArrayList<WeatherDescription> weatherDescription) {
-        this.weatherDescription = weatherDescription;
+    public void setWeatherDescription(WeatherDescription weatherDescriptions) {
+        this.weatherDescription = weatherDescriptions;
     }
 
     public String getDate() {

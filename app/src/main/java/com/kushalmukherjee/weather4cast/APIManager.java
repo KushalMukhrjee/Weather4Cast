@@ -1,12 +1,7 @@
 package com.kushalmukherjee.weather4cast;
 
 import android.app.Application;
-import android.app.DownloadManager;
 import android.content.Context;
-import android.util.Log;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.arch.core.util.Function;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -14,8 +9,6 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-
-import org.json.JSONObject;
 
 import java.util.HashMap;
 
@@ -41,7 +34,7 @@ public class APIManager extends Application {
 
 
 
-    public void makeRequest(Context context, HashMap<String,String> params, CompletionHandler handler ) {
+    public void makeRequest(Context context, HashMap<String,String> params, RequestCompletionHandler handler ) {
 
         RequestQueue queue = Volley.newRequestQueue(context);
 
@@ -67,6 +60,6 @@ public class APIManager extends Application {
 }
 
 
-interface CompletionHandler {
+interface RequestCompletionHandler {
     void completion(String responseString);
 }
