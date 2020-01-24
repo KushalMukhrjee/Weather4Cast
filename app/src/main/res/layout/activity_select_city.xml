@@ -9,7 +9,7 @@
     <ImageView
         android:id="@+id/backgroundImage"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:scaleType="fitXY"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -34,5 +34,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.3" />
+
+    <Button
+        android:id="@+id/currentLocationButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:text="Use my current location"
+        android:textColor="#2196F3"
+        app:layout_constraintEnd_toEndOf="@+id/enterCityPlainText"
+        app:layout_constraintStart_toStartOf="@+id/enterCityPlainText"
+        app:layout_constraintTop_toBottomOf="@+id/enterCityPlainText" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -16,20 +16,22 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.kushalmukherjee.weather4cast.Model.Forecast;
 import com.kushalmukherjee.weather4cast.Model.Weather;
 
 import org.json.JSONObject;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -45,17 +47,31 @@ public class MainActivity extends AppCompatActivity {
     TextView minTemperatureTextView;
     ImageView weatherImageView;
     ImageButton changeCityButton;
+    ProgressBar progressBar;
 
 
     LocationManager locationManager;
 
     Weather currentWeather;
+    Forecast currentForecast;
     String currentCityName;
+
+    int progressStatus = 0;
+
+    ArrayList<ArrayList<View>> forecastViewElements = new ArrayList<>();
+
+    ArrayList<View> forecastDaysTextViews = new ArrayList<>();
+    ArrayList<View> forecastImageViews = new ArrayList<>();
+    ArrayList<View> forecastMaxMinTextViews = new ArrayList<>();
+
+
+
 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
 
         if (requestCode == 1) {
 
@@ -71,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        getSupportActionBar().hide();
 
         ImageView backgroundImage = findViewById(R.id.backgroundImage);
         Blurry.with(this).from(BitmapFactory.decodeResource(getResources(),R.drawable.weather4castimage)).into(backgroundImage);
@@ -84,6 +99,35 @@ public class MainActivity extends AppCompatActivity {
         minTemperatureTextView = (TextView) findViewById(R.id.minTempTextView);
         weatherImageView = (ImageView) findViewById(R.id.weatherImageView);
         changeCityButton = (ImageButton) findViewById(R.id.changeCityImageButton);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+
+        forecastDaysTextViews.add(findViewById(R.id.firstdayNameTextView));
+        forecastDaysTextViews.add(findViewById(R.id.seconddayNameTextView));
+        forecastDaysTextViews.add(findViewById(R.id.thirddayNameTextView));
+        forecastDaysTextViews.add(findViewById(R.id.fourthdayNameTextView));
+        forecastDaysTextViews.add(findViewById(R.id.fifthdayNameTextView));
+
+        forecastViewElements.add(forecastDaysTextViews);
+
+
+        forecastImageViews.add(findViewById(R.id.firstdayImageView));
+        forecastImageViews.add(findViewById(R.id.seconddayImageView));
+        forecastImageViews.add(findViewById(R.id.thirddayImageView));
+        forecastImageViews.add(findViewById(R.id.fourthdayImageView));
+        forecastImageViews.add(findViewById(R.id.fifthdayImageView));
+
+        forecastViewElements.add(forecastImageViews);
+
+
+        forecastMaxMinTextViews.add(findViewById(R.id.firstDayTempMaxMin));
+        forecastMaxMinTextViews.add(findViewById(R.id.secondDayTempMaxMin));
+        forecastMaxMinTextViews.add(findViewById(R.id.thirdDayTempMaxMin));
+        forecastMaxMinTextViews.add(findViewById(R.id.fourthDayTempMaxMin));
+        forecastMaxMinTextViews.add(findViewById(R.id.fifthDayTempMaxMin));
+
+        forecastViewElements.add(forecastMaxMinTextViews);
+
+
 
         changeCityButton.setOnClickListener(new View.OnClickListener() {
 
@@ -112,7 +156,9 @@ public class MainActivity extends AppCompatActivity {
         LocationListener locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-//                Log.i("Location received:",location.toString());
+
+
+
                 currentCityName = getCityName(new LatLng(location.getLatitude(),location.getLongitude()));
 
                 getWeatherDataOfLocation(location, new GetWeatherCompletionHandler() {
@@ -120,7 +166,21 @@ public class MainActivity extends AppCompatActivity {
                     public void completion(Weather weather) {
                         currentWeather = weather;
 
-                        refreshUIState();
+
+
+                        refreshWeatherUIState();
+                    }
+                });
+
+                getForecastDataOfLocation(location, new GetForecastCompletionHandler() {
+
+
+                    @Override
+                    public void completion(Forecast forecast) {
+
+                        currentForecast = forecast;
+                        refreshForecastUIState();
+
                     }
                 });
 
@@ -156,17 +216,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void getWeatherDataOfLocation(Location location, GetWeatherCompletionHandler completionHandler) {
-        System.out.println("-----MAking api call----");
 
         HashMap params = new HashMap<String ,String>();
         params.put("latitude",String.valueOf(location.getLatitude()));
         params.put("longitude",String.valueOf(location.getLongitude()));
 
-        APIManager.getInstance().makeRequest(MainActivity.this, params, new RequestCompletionHandler() {
+        APIManager.getInstance().makeWeatherRequest(MainActivity.this, params, new RequestCompletionHandler() {
 
             @Override
             public void completion(String responseString) {
                 try {
+
+
 
                     JSONObject jsonObject = new JSONObject(responseString);
                     JSONParser parser = new JSONParser();
@@ -177,6 +238,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private void getForecastDataOfLocation(Location location, GetForecastCompletionHandler completionHandler) {
+
+        HashMap params = new HashMap<String ,String>();
+        params.put("latitude",String.valueOf(location.getLatitude()));
+        params.put("longitude",String.valueOf(location.getLongitude()));
+
+        APIManager.getInstance().makeForecastRequest(this, params, new RequestCompletionHandler() {
+            @Override
+            public void completion(String responseString) {
+                try {
+
+
+                    JSONObject jsonObject = new JSONObject(responseString);
+                    JSONParser jsonParser = new JSONParser();
+                    completionHandler.completion(jsonParser.parseForecastJson(jsonObject));
+
+                }catch(Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
 
@@ -203,32 +287,49 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == 1) {
 
             if(resultCode == Activity.RESULT_OK) {
+
+                resetUIState();
                 String location = data.getStringExtra("city");
 
-                try {
-                    Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-                    List<Address> list = geocoder.getFromLocationName(location, 1);
-                    Log.i("RecdLAtlng", String.valueOf(list.get(0).getLatitude()));
+                if(location.equals("currentLocation")) {
 
-                    Location receivedLocation = new Location("select_city_activity");
-                    receivedLocation.setLatitude(list.get(0).getLatitude());
-                    receivedLocation.setLongitude(list.get(0).getLongitude());
+                    getCurrentLocation();
 
-                    getWeatherDataOfLocation(receivedLocation, new GetWeatherCompletionHandler() {
-                        @Override
-                        public void completion(Weather weather) {
-                            currentWeather = weather;
-                            currentCityName = list.get(0).getLocality();
-
-                            refreshUIState();
-                        }
-                    });
+                } else {
 
 
+                    try {
+                        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                        List<Address> list = geocoder.getFromLocationName(location, 1);
+                        Log.i("RecdLAtlng", String.valueOf(list.get(0).getLatitude()));
+
+                        Location receivedLocation = new Location("select_city_activity");
+                        receivedLocation.setLatitude(list.get(0).getLatitude());
+                        receivedLocation.setLongitude(list.get(0).getLongitude());
+
+                        getWeatherDataOfLocation(receivedLocation, new GetWeatherCompletionHandler() {
+                            @Override
+                            public void completion(Weather weather) {
+                                currentWeather = weather;
+                                currentCityName = list.get(0).getLocality();
+
+                                refreshWeatherUIState();
+                            }
+                        });
+
+                        getForecastDataOfLocation(receivedLocation, new GetForecastCompletionHandler() {
+                            @Override
+                            public void completion(Forecast forecast) {
+                                currentForecast = forecast;
+                                refreshForecastUIState();
+                            }
+                        });
 
 
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    } catch (Exception e) {
+
+                        e.printStackTrace();
+                    }
                 }
 
             }
@@ -239,7 +340,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void refreshUIState() {
+    public void refreshWeatherUIState() {
 
         cityTextView.setText(currentCityName);
         DecimalFormat df = new DecimalFormat("#.#");
@@ -257,15 +358,83 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        progressBar.setVisibility(View.INVISIBLE);
+    }
+
+    public void refreshForecastUIState() {
+
+        for (int i = 0; i < currentForecast.getFollowingFiveDays().size(); i++) {
+
+            ArrayList<View> dayNamesTextViews = forecastViewElements.get(0);
+            TextView currentDayTextView = (TextView) dayNamesTextViews.get(i);
+            currentDayTextView.setText(currentForecast.getFollowingFiveDays().get(i));
+
+
+        }
+
+        for (int i = 0; i < currentForecast.getMaxMinTempForFollowingFiveDays().size(); i++) {
+
+            ArrayList<View> maxMinTextViews = forecastViewElements.get(2);
+            TextView currentMaxMinTextView = (TextView) maxMinTextViews.get(i);
+            currentMaxMinTextView.setText(currentForecast.getMaxMinTempForFollowingFiveDays().get(i));
+
+
+        }
+
+        for (int i = 0; i < currentForecast.getAvgWeatherConditionImageStringsForFiveDays().size(); i++) {
+
+            ArrayList<View> forecastImageViews = forecastViewElements.get(1);
+            ImageView forecastImageView = (ImageView) forecastImageViews.get(i);
+
+            try {
+                forecastImageView.setImageBitmap(new ImageDownloader().execute("https://openweathermap.org/img/wn/" + (currentForecast.getAvgWeatherConditionImageStringsForFiveDays().get(i)) + "d@2x.png").get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
+
+        }
+
+
+        for (ArrayList<View> arrList: forecastViewElements) {
+
+            for (View v: arrList) {
+
+                v.setVisibility(View.VISIBLE);
+
+            }
+
+        }
+
+
+
     }
 
     public void resetUIState() {
+        progressBar.setVisibility(View.VISIBLE);
         cityTextView.setText("");
         currentTemperatureTextView.setText("");
         maxTemperatureTextView.setText("");
         minTemperatureTextView.setText("");
         weatherImageView.setImageBitmap(null);
         changeCityButton.setVisibility(View.INVISIBLE);
+
+
+
+        for (ArrayList<View> arrList: forecastViewElements) {
+
+            for (View v: arrList) {
+
+                v.setVisibility(View.INVISIBLE);
+
+            }
+
+        }
+
+
+
     }
 }
 
@@ -273,4 +442,8 @@ public class MainActivity extends AppCompatActivity {
 
 interface GetWeatherCompletionHandler {
     void completion(Weather weather);
-        }
+}
+
+interface GetForecastCompletionHandler {
+    void completion(Forecast forecast);
+}
